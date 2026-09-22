@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spelling Drill</title>
+<style>
+  :root{
+    --board:#1f2f2b;
+    --board-2:#243830;
+    --chalk:#f4f1e8;
+    --chalk-dim:#c9d3cc;
+    --yellow:#e8c468;
+    --green-ok:#8fbf8a;
+    --red-no:#e0796e;
+    --wood:#6b4a34;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0; height:100%;}
+  body{
+    background:var(--board);
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(255,255,255,0.03), transparent 40%),
+      radial-gradient(ellipse at 80% 90%, rgba(255,255,255,0.025), transparent 40%);
+    color:var(--chalk);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:calc(32px + env(safe-area-inset-top, 0px)) 16px calc(48px + env(safe-area-inset-bottom, 0px));
+  }
+  .frame{
+    width:100%;
+    max-width:640px;
+    border:10px solid var(--wood);
+    border-radius:6px;
+    background:var(--board-2);
+    box-shadow:0 12px 30px rgba(0,0,0,0.35), inset 0 0 40px rgba(0,0,0,0.25);
+    padding:36px 32px 28px;
+    position:relative;
+  }
+  h1{
+    font-family: 'Baskerville', Georgia, serif;
+    font-weight:400;
+    font-style:italic;
+    font-size:2rem;
+    letter-spacing:0.02em;
+    margin:0 0 6px;
+    text-shadow:0 0 12px rgba(244,241,232,0.08);
+  }
+  .sub{color:var(--chalk-dim); font-size:0.95rem; margin:0 0 24px; line-height:1.5;}
+
+  .add-row{display:flex; gap:10px; margin-bottom:18px;}
+  input[type="text"]{
+    font-family:inherit;
+    background:rgba(0,0,0,0.18);
+    border:1px solid rgba(244,241,232,0.25);
+    border-radius:4px;
+    color:var(--chalk);
+    font-size:1.05rem;
+    padding:12px 14px;
+  }
+  #newWord{flex:1; min-width:0;}
+  input:focus{outline:2px solid var(--yellow); outline-offset:1px;}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:3px;
+    font-size:1rem;
+    padding:12px 20px;
+    transition:transform 0.08s ease, background 0.15s ease;
+  }
+  button:active{transform:translateY(1px);}
+  .btn-primary{background:var(--yellow); color:#2a2015; font-weight:600;}
+  .btn-primary:hover{background:#f0d27f;}
+  .btn-primary:disabled{opacity:0.35; cursor:not-allowed;}
+  .btn-ghost{background:transparent; color:var(--chalk); border:1px solid rgba(244,241,232,0.35);}
+  .btn-ghost:hover{background:rgba(244,241,232,0.08);}
+  .btn-small{padding:6px 10px; font-size:0.85rem;}
+
+  .word-list{
+    list-style:none;
+    margin:0 0 22px;
+    padding:0;
+    max-height:260px;
+    overflow-y:auto;
+    border-top:1px solid rgba(244,241,232,0.12);
+  }
+  .word-list li{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 4px;
+    border-bottom:1px solid rgba(244,241,232,0.12);
+    font-size:1.02rem;
+  }
+  .word-meta{color:var(--chalk-dim); font-size:0.78rem; margin-left:10px;}
+  .word-left{display:flex; align-items:baseline; overflow:hidden;}
+  .word-left span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .empty-note{color:var(--chalk-dim); font-size:0.9rem; padding:18px 4px; text-align:center;}
+  .del-btn{background:transparent; color:var(--red-no); border:1px solid rgba(224,121,110,0.4); padding:5px 10px; font-size:0.8rem;}
+  .del-btn:hover{background:rgba(224,121,110,0.12);}
+
+  .row{display:flex; gap:12px; margin-top:8px; align-items:center; flex-wrap:wrap;}
+
+  /* Practice screen */
+  .practice{display:none;}
+  .stage{text-align:center; padding:18px 0 8px;}
+  .listen-btn{
+    width:88px; height:88px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #34493f, #1a2823);
+    border:2px solid rgba(244,241,232,0.25);
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 18px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.3);
+  }
+  .listen-btn svg{width:34px; height:34px; fill:var(--chalk);}
+  .listen-btn:hover{border-color:var(--yellow);}
+  .listen-label{font-size:0.85rem; color:var(--chalk-dim); margin-bottom:24px;}
+  .answer-input{
+    width:100%;
+    max-width:340px;
+    background:rgba(0,0,0,0.18);
+    border:none;
+    border-bottom:2px solid rgba(244,241,232,0.4);
+    color:var(--chalk);
+    font-size:1.3rem;
+    text-align:center;
+    padding:10px 8px;
+    font-family:'Georgia', serif;
+  }
+  .answer-input:focus{outline:none; border-bottom-color:var(--yellow);}
+  .feedback{
+    min-height:52px;
+    margin-top:16px;
+    font-size:1rem;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+  }
+  .feedback.ok{color:var(--green-ok);}
+  .feedback.no{color:var(--red-no);}
+  .correct-spelling{font-style:italic; color:var(--chalk-dim); font-size:0.95rem;}
+  .stats{text-align:center; color:var(--chalk-dim); font-size:0.82rem; margin-top:10px;}
+
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+
+  /* Database modal */
+  .modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.55);
+    align-items:flex-start;
+    justify-content:center;
+    padding:40px 16px;
+    overflow-y:auto;
+    z-index:50;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    width:100%;
+    max-width:640px;
+    background:var(--board-2);
+    border:8px solid var(--wood);
+    border-radius:6px;
+    padding:28px 26px 22px;
+    box-shadow:0 16px 40px rgba(0,0,0,0.5);
+  }
+  .modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .modal-head h2{
+    font-family:'Baskerville', Georgia, serif;
+    font-weight:400;
+    font-style:italic;
+    font-size:1.5rem;
+    margin:0;
+  }
+  .modal-close{background:transparent; border:none; color:var(--chalk-dim); font-size:1.4rem; padding:4px 8px; line-height:1;}
+  .modal-close:hover{color:var(--chalk);}
+  .modal .sub{margin-bottom:16px;}
+  .bulk-insert{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:20px;
+    padding-bottom:18px;
+    border-bottom:1px solid rgba(244,241,232,0.15);
+  }
+  .bulk-insert textarea{
+    width:100%;
+    min-height:80px;
+    background:rgba(0,0,0,0.18);
+    border:1px solid rgba(244,241,232,0.25);
+    border-radius:4px;
+    color:var(--chalk);
+    font-family:'Georgia', serif;
+    font-size:0.98rem;
+    padding:10px 12px;
+    resize:vertical;
+  }
+  .bulk-insert textarea:focus{outline:2px solid var(--yellow); outline-offset:1px;}
+  table.word-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:0.95rem;
+  }
+  table.word-table thead th{
+    text-align:left;
+    color:var(--chalk-dim);
+    font-weight:400;
+    font-size:0.78rem;
+    letter-spacing:0.03em;
+    padding:6px 8px;
+    border-bottom:1px solid rgba(244,241,232,0.25);
+  }
+  table.word-table td{
+    padding:6px 8px;
+    border-bottom:1px solid rgba(244,241,232,0.1);
+    vertical-align:middle;
+  }
+  table.word-table td.num{color:var(--chalk-dim); text-align:center; width:44px;}
+  table.word-table input.row-word{
+    width:100%;
+    background:transparent;
+    border:1px solid transparent;
+    border-radius:3px;
+    color:var(--chalk);
+    font-family:'Georgia', serif;
+    font-size:0.98rem;
+    padding:5px 7px;
+  }
+  table.word-table input.row-word:hover{border-color:rgba(244,241,232,0.2);}
+  table.word-table input.row-word:focus{outline:none; border-color:var(--yellow); background:rgba(0,0,0,0.18);}
+  .table-wrap{max-height:340px; overflow-y:auto;}
+  .row-count{color:var(--chalk-dim); font-size:0.8rem; margin-top:12px;}
+</style>
+</head>
+<body>
+
+<div class="frame" id="setupScreen">
+  <h1>Spelling Drill</h1>
+  <p class="sub">Add your words once — the app remembers them for good, even if you come back later. When you're ready, hit start: it'll read one out at random, you write it, and it tells you right away if you got it right.</p>
+
+  <div class="add-row">
+    <input type="text" id="newWord" placeholder="Add a word" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button class="btn-primary" id="addBtn">Add</button>
+  </div>
+
+  <ul class="word-list" id="wordList"></ul>
+
+  <div class="row">
+    <button class="btn-primary" id="startBtn" disabled>Start</button>
+    <button class="btn-ghost" id="dbBtn">Database</button>
+    <button class="btn-ghost btn-small" id="clearBtn">Clear all</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dbOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Word database</h2>
+      <button class="modal-close" id="dbCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <p class="sub">Paste multiple words at once (one per line, or comma-separated) to insert them all in one go. Edit any word directly in the table, or delete a row.</p>
+    <div class="bulk-insert">
+      <textarea id="bulkInput" placeholder="word one
+word two
+word three"></textarea>
+      <div class="row" style="margin-top:0;">
+        <button class="btn-primary" id="bulkInsertBtn">Insert into database</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="word-table">
+        <thead>
+          <tr><th style="width:44px;">#</th><th>Word</th><th class="num">Correct</th><th class="num">Wrong</th><th></th></tr>
+        </thead>
+        <tbody id="dbTableBody"></tbody>
+      </table>
+    </div>
+    <div class="row-count" id="dbRowCount"></div>
+  </div>
+</div>
+
+<div class="frame practice" id="practiceScreen">
+  <div class="stage">
+    <button class="listen-btn" id="listenBtn" aria-label="Listen to the word" title="Listen to the word">
+      <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L8 9H4zm11.5 3c0-1.77-1.02-3.29-2.5-4.03v8.06c1.48-.74 2.5-2.26 2.5-4.03zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </button>
+    <div class="listen-label">Click to hear (or replay) the word</div>
+    <input type="text" class="answer-input" id="answerInput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the word here">
+    <div class="feedback" id="feedback"></div>
+    <div class="row" style="justify-content:center;">
+      <button class="btn-primary" id="checkBtn">Check</button>
+      <button class="btn-ghost" id="nextBtn">Next word</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="row" style="justify-content:center; margin-top:22px;">
+      <button class="btn-ghost btn-small" id="backBtn">Back to list</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'dictee_words_v1';
+
+  const setupScreen = document.getElementById('setupScreen');
+  const practiceScreen = document.getElementById('practiceScreen');
+  const newWordInput = document.getElementById('newWord');
+  const addBtn = document.getElementById('addBtn');
+  const wordListEl = document.getElementById('wordList');
+  const startBtn = document.getElementById('startBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const dbBtn = document.getElementById('dbBtn');
+  const dbOverlay = document.getElementById('dbOverlay');
+  const dbCloseBtn = document.getElementById('dbCloseBtn');
+  const bulkInput = document.getElementById('bulkInput');
+  const bulkInsertBtn = document.getElementById('bulkInsertBtn');
+  const dbTableBody = document.getElementById('dbTableBody');
+  const dbRowCount = document.getElementById('dbRowCount');
+  const listenBtn = document.getElementById('listenBtn');
+  const answerInput = document.getElementById('answerInput');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const backBtn = document.getElementById('backBtn');
+  const feedback = document.getElementById('feedback');
+  const stats = document.getElementById('stats');
+
+  let words = [];        // [{text, correct, wrong}]
+  let currentIdx = null;
+  let frenchVoice = null;
+
+  function loadWords(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      words = raw ? JSON.parse(raw) : [];
+    }catch(e){
+      words = [];
+    }
+  }
+  function saveWords(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
+    }catch(e){ /* storage unavailable — practice still works this session */ }
+  }
+
+  function pickVoice(){
+    const voices = speechSynthesis.getVoices();
+    frenchVoice =
+      voices.find(v => v.lang && v.lang.toLowerCase() === 'en-us') ||
+      voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) ||
+      voices[0] || null;
+  }
+  if ('speechSynthesis' in window){
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+  }
+  function speak(text){
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (frenchVoice) u.voice = frenchVoice;
+    u.lang = 'en-US';
+    u.rate = 0.88;
+    speechSynthesis.speak(u);
+  }
+
+  function normalize(s){ return s.trim().toLowerCase(); }
+
+  function renderWordList(){
+    wordListEl.innerHTML = '';
+    if (words.length === 0){
+      const li = document.createElement('li');
+      li.className = 'empty-note';
+      li.textContent = 'No words yet — add one above.';
+      li.style.border = 'none';
+      wordListEl.appendChild(li);
+      startBtn.disabled = true;
+      return;
+    }
+    startBtn.disabled = false;
+    words.forEach((w, i) => {
+      const li = document.createElement('li');
+      const left = document.createElement('div');
+      left.className = 'word-left';
+      const name = document.createElement('span');
+      name.textContent = w.text;
+      const meta = document.createElement('span');
+      meta.className = 'word-meta';
+      meta.textContent = `  (${w.correct}✓ / ${w.wrong}✗)`;
+      left.appendChild(name);
+      left.appendChild(meta);
+      const del = document.createElement('button');
+      del.className = 'del-btn';
+      del.textContent = 'Delete';
+      del.addEventListener('click', () => {
+        words.splice(i, 1);
+        saveWords();
+        renderWordList();
+      });
+      li.appendChild(left);
+      li.appendChild(del);
+      wordListEl.appendChild(li);
+    });
+  }
+
+  function addWord(){
+    const raw = newWordInput.value;
+    const parts = raw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+    if (parts.length === 0) return;
+    parts.forEach(text => {
+      if (!words.some(w => normalize(w.text) === normalize(text))){
+        words.push({text, correct:0, wrong:0});
+      }
+    });
+    saveWords();
+    renderWordList();
+    newWordInput.value = '';
+    newWordInput.focus();
+  }
+
+  function renderDbTable(){
+    dbTableBody.innerHTML = '';
+    if (words.length === 0){
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 5;
+      td.className = 'empty-note';
+      td.textContent = 'No words yet — insert some above.';
+      tr.appendChild(td);
+      dbTableBody.appendChild(tr);
+    } else {
+      words.forEach((w, i) => {
+        const tr = document.createElement('tr');
+
+        const tdNum = document.createElement('td');
+        tdNum.className = 'num';
+        tdNum.textContent = i + 1;
+
+        const tdWord = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'row-word';
+        inp.value = w.text;
+        inp.autocomplete = 'off';
+        inp.autocapitalize = 'off';
+        inp.spellcheck = false;
+        inp.addEventListener('change', () => {
+          const val = inp.value.trim();
+          if (val.length === 0){ inp.value = w.text; return; }
+          w.text = val;
+          saveWords();
+          renderWordList();
+        });
+        tdWord.appendChild(inp);
+
+        const tdCorrect = document.createElement('td');
+        tdCorrect.className = 'num';
+        tdCorrect.textContent = w.correct;
+
+        const tdWrong = document.createElement('td');
+        tdWrong.className = 'num';
+        tdWrong.textContent = w.wrong;
+
+        const tdDel = document.createElement('td');
+        const del = document.createElement('button');
+        del.className = 'del-btn';
+        del.textContent = 'Delete';
+        del.addEventListener('click', () => {
+          words.splice(i, 1);
+          saveWords();
+          renderWordList();
+          renderDbTable();
+        });
+        tdDel.appendChild(del);
+
+        tr.appendChild(tdNum);
+        tr.appendChild(tdWord);
+        tr.appendChild(tdCorrect);
+        tr.appendChild(tdWrong);
+        tr.appendChild(tdDel);
+        dbTableBody.appendChild(tr);
+      });
+    }
+    dbRowCount.textContent = `${words.length} row${words.length !== 1 ? 's' : ''} in the database`;
+  }
+
+  function openDb(){
+    renderDbTable();
+    dbOverlay.classList.add('open');
+    bulkInput.value = '';
+    bulkInput.focus();
+  }
+  function closeDb(){
+    dbOverlay.classList.remove('open');
+    renderWordList();
+  }
+  dbBtn.addEventListener('click', openDb);
+  dbCloseBtn.addEventListener('click', closeDb);
+  dbOverlay.addEventListener('click', (e) => { if (e.target === dbOverlay) closeDb(); });
+
+  bulkInsertBtn.addEventListener('click', () => {
+    const raw = bulkInput.value;
+    const parts = raw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+    if (parts.length === 0) return;
+    parts.forEach(text => {
+      if (!words.some(w => normalize(w.text) === normalize(text))){
+        words.push({text, correct:0, wrong:0});
+      }
+    });
+    saveWords();
+    renderDbTable();
+    bulkInput.value = '';
+    bulkInput.focus();
+  });
+
+  addBtn.addEventListener('click', addWord);
+  newWordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter'){ e.preventDefault(); addWord(); }
+  });
+  clearBtn.addEventListener('click', () => {
+    if (words.length === 0) return;
+    if (confirm('Delete all saved words?')){
+      words = [];
+      saveWords();
+      renderWordList();
+    }
+  });
+
+  function renderStats(){
+    const w = words[currentIdx];
+    stats.textContent = `This word: ${w.correct}✓ / ${w.wrong}✗   —   ${words.length} word${words.length>1?'s':''} in the list`;
+  }
+
+  function nextWord(){
+    if (words.length === 0){
+      backToSetup();
+      return;
+    }
+    let choices = words.map((_, i) => i);
+    if (words.length > 1 && currentIdx !== null){
+      choices = choices.filter(i => i !== currentIdx);
+    }
+    currentIdx = choices[Math.floor(Math.random() * choices.length)];
+    answerInput.value = '';
+    feedback.className = 'feedback';
+    feedback.innerHTML = '';
+    renderStats();
+    answerInput.focus();
+    speak(words[currentIdx].text);
+  }
+
+  function checkAnswer(){
+    if (currentIdx === null) return;
+    const w = words[currentIdx];
+    const given = normalize(answerInput.value);
+    if (given.length === 0){ answerInput.focus(); return; }
+
+    if (given === normalize(w.text)){
+      w.correct++;
+      feedback.className = 'feedback ok';
+      feedback.innerHTML = `<div>Correct.</div>`;
+      saveWords();
+      renderStats();
+      setTimeout(nextWord, 800);
+    } else {
+      w.wrong++;
+      feedback.className = 'feedback no';
+      feedback.innerHTML = `<div>Wrong.</div><div class="correct-spelling">Correct spelling: ${w.text}</div>`;
+      saveWords();
+      renderStats();
+      answerInput.select();
+    }
+  }
+
+  checkBtn.addEventListener('click', checkAnswer);
+  answerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkAnswer(); });
+  nextBtn.addEventListener('click', nextWord);
+  listenBtn.addEventListener('click', () => { if (currentIdx !== null) speak(words[currentIdx].text); });
+
+  startBtn.addEventListener('click', () => {
+    if (words.length === 0) return;
+    setupScreen.style.display = 'none';
+    practiceScreen.style.display = 'block';
+    currentIdx = null;
+    nextWord();
+  });
+
+  function backToSetup(){
+    practiceScreen.style.display = 'none';
+    setupScreen.style.display = 'block';
+    renderWordList();
+  }
+  backBtn.addEventListener('click', backToSetup);
+
+  loadWords();
+  renderWordList();
+})();
+</script>
+</body>
+</html>
